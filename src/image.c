@@ -32,15 +32,15 @@ BoundingBox* get_closest_person()
 
   BoundingBox* closest_person = NULL;
 
-  double ball_x = (double)sportsBall->left + (double)sportsBall->right / 2.0;
-  double ball_y = (double)sportsBall->top + (double)sportsBall->bot / 2.0;
+  double ball_x = ((double)sportsBall->left + (double)sportsBall->right) / 2.0;
+  double ball_y = ((double)sportsBall->top + (double)sportsBall->bot )/ 2.0;
 
   double mn_dist = 1000000.0;
 
   int i;
   for(i=0; i<personsCnt; i++) {
-    double person_x = (double)persons[i]->left + (double)persons[i]->right / 2.0;
-    double person_y = (double)persons[i]->top + (double)persons[i]->bot / 2.0;
+    double person_x = ((double)persons[i]->left + (double)persons[i]->right) / 2.0;
+    double person_y = ((double)persons[i]->top + (double)persons[i]->bot) / 2.0;
     double dist = distance(ball_x, ball_y, person_x, person_y);
     if (dist < mn_dist) {
       closest_person = persons[i];
@@ -356,8 +356,8 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
               sportsBall->top = top;
               sportsBall->bot = bot;
             }
-
-            draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            if (personsCnt == 8)
+              draw_box_width(im, left, top, right, bot, width, red, green, blue);
             // strcpy(labelstr, "gfdgdfgfh");
             if (alphabet) {
                 image label = get_label(alphabet, labelstr, (im.h*.03)/10);
