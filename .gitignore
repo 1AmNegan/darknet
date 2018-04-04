@@ -18,6 +18,9 @@ submission/
 cfg/
 darknet
 .fuse*
+yolo.weights
+libdarknet.a
+libdarknet.so
 
 # OS Generated #
 .DS_Store*
