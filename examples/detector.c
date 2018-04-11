@@ -614,7 +614,11 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         draw_detections(im, l.w*l.h*l.n, thresh, boxes, probs, masks, names, alphabet, l.classes);
         printf("Persons count = %d\n", get_persons_cnt());
         BoundingBox* cp = get_closest_person();
+        FILE *f = fopen("../bbox.txt", "w");
         printf("Closest person - left=%d right=%d top=%d bottom=%d\n", cp->left, cp->right, cp->top, cp->bot);
+        fprintf(f, "%d\n%d\n%d\n%d\n", cp->left, cp->top, cp->right, cp->bot);
+        if(f != NULL) printf("f yes\n");
+        fclose(f);
         if(outfile){
             save_image(im, outfile);
         }
