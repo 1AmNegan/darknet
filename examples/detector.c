@@ -353,7 +353,7 @@ void validate_detector_flip(char *datacfg, char *cfgfile, char *weightfile, char
         if(fps) fclose(fps[j]);
     }
     if(coco){
-        fseek(fp, -2, SEEK_CUR); 
+        fseek(fp, -2, SEEK_CUR);
         fprintf(fp, "\n]\n");
         fclose(fp);
     }
@@ -479,7 +479,7 @@ void validate_detector(char *datacfg, char *cfgfile, char *weightfile, char *out
         if(fps) fclose(fps[j]);
     }
     if(coco){
-        fseek(fp, -2, SEEK_CUR); 
+        fseek(fp, -2, SEEK_CUR);
         fprintf(fp, "\n]\n");
         fclose(fp);
     }
@@ -603,13 +603,22 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
         draw_detections(im, dets, nboxes, thresh, names, alphabet, l.classes);
         free_detections(dets, nboxes);
+        printf("Persons count = %d\n", get_persons_cnt());
+        BoundingBox* cp = get_closest_person();
+        if (cp) {
+          FILE *f = fopen("bbox.txt", "w");
+          if(f != NULL) {
+            fprintf(f, "%d\n%d\n%d\n%d\n", cp->left, cp->top, cp->right, cp->bot);
+            fclose(f);
+          }
+        }
         if(outfile){
             save_image(im, outfile);
         }
         else{
             save_image(im, "predictions");
 #ifdef OPENCV
-            cvNamedWindow("predictions", CV_WINDOW_NORMAL); 
+            cvNamedWindow("predictions", CV_WINDOW_NORMAL);
             if(fullscreen){
                 cvSetWindowProperty("predictions", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
             }
@@ -653,7 +662,7 @@ void censor_detector(char *datacfg, char *cfgfile, char *weightfile, int cam_ind
     }
 
     if(!cap) error("Couldn't connect to webcam.\n");
-    cvNamedWindow(base, CV_WINDOW_NORMAL); 
+    cvNamedWindow(base, CV_WINDOW_NORMAL);
     cvResizeWindow(base, 512, 512);
     float fps = 0;
     int i;
@@ -726,7 +735,7 @@ void extract_detector(char *datacfg, char *cfgfile, char *weightfile, int cam_in
     }
 
     if(!cap) error("Couldn't connect to webcam.\n");
-    cvNamedWindow(base, CV_WINDOW_NORMAL); 
+    cvNamedWindow(base, CV_WINDOW_NORMAL);
     cvResizeWindow(base, 512, 512);
     float fps = 0;
     int i;

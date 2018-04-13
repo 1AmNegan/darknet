@@ -25,3 +25,9 @@ ehthumbs.db
 Icon?
 Thumbs.db
 *.swp
+
+bbox.txt
+libdarknet.a
+libdarknet.so
+yolo.weights
+yolov3.weights

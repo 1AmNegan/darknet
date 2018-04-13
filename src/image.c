@@ -14,6 +14,47 @@ int windows = 0;
 
 float colors[6][3] = { {1,0,1}, {0,0,1},{0,1,1},{0,1,0},{1,1,0},{1,0,0} };
 
+BoundingBox *persons[100];
+int personsCnt = 0;
+BoundingBox *sportsBall;
+
+int get_persons_cnt()
+{
+  return personsCnt;
+}
+
+double distance(double x1, double y1, double x2, double y2)
+{
+  return sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+}
+
+BoundingBox* get_closest_person()
+{
+  if (!sportsBall || personsCnt == 0) {
+    return NULL;
+  }
+
+  BoundingBox* closest_person = NULL;
+
+  double ball_x = ((double)sportsBall->left + (double)sportsBall->right) / 2.0;
+  double ball_y = ((double)sportsBall->top + (double)sportsBall->bot) / 2.0;
+
+  double mn_dist = 1000000.0;
+
+  int i;
+  for(i=0; i<personsCnt; i++) {
+    double person_x = ((double)persons[i]->left + (double)persons[i]->right) / 2.0;
+    double person_y = ((double)persons[i]->top + (double)persons[i]->bot) / 2.0;
+    double dist = distance(ball_x, ball_y, person_x, person_y);
+    printf("Person left: %d   Dist: %lf\n", persons[i]->left, dist);
+    if (dist < mn_dist) {
+      closest_person = persons[i];
+      mn_dist = dist;
+    }
+  }
+  return closest_person;
+}
+
 float get_color(int c, int x, int max)
 {
     float ratio = ((float)x/max)*5;
@@ -81,8 +122,8 @@ static float bilinear_interpolate(image im, float x, float y, int c)
     float dx = x - ix;
     float dy = y - iy;
 
-    float val = (1-dy) * (1-dx) * get_pixel_extend(im, ix, iy, c) + 
-        dy     * (1-dx) * get_pixel_extend(im, ix, iy+1, c) + 
+    float val = (1-dy) * (1-dx) * get_pixel_extend(im, ix, iy, c) +
+        dy     * (1-dx) * get_pixel_extend(im, ix, iy+1, c) +
         (1-dy) *   dx   * get_pixel_extend(im, ix+1, iy, c) +
         dy     *   dx   * get_pixel_extend(im, ix+1, iy+1, c);
     return val;
@@ -124,7 +165,7 @@ image tile_images(image a, image b, int dx)
     if(a.w == 0) return copy_image(b);
     image c = make_image(a.w + b.w + dx, (a.h > b.h) ? a.h : b.h, (a.c > b.c) ? a.c : b.c);
     fill_cpu(c.w*c.h*c.c, 1, c.data, 1);
-    embed_image(a, c, 0, 0); 
+    embed_image(a, c, 0, 0);
     composite_image(b, c, a.w + dx, 0);
     return c;
 }
@@ -243,11 +284,19 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
     for(i = 0; i < num; ++i){
         char labelstr[4096] = {0};
         int class = -1;
+        int isPerson = 0, isSportsBall = 0;
         for(j = 0; j < classes; ++j){
             if (dets[i].prob[j] > thresh){
                 if (class < 0) {
                     strcat(labelstr, names[j]);
                     class = j;
+                    printf("label=%s\n", names[j]);
+                    if (0==strcmp(names[j], "person")) {
+                      isPerson = 1;
+                    }
+                    else if (0==strcmp(names[j], "sports ball")) {
+                      isSportsBall = 1;
+                    }
                 } else {
                     strcat(labelstr, ", ");
                     strcat(labelstr, names[j]);
@@ -289,6 +338,25 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             if(right > im.w-1) right = im.w-1;
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
+
+            if (isPerson) {
+              printf("Person position- left=%d right=%d top=%d bottom=%d\n", left, right, top, bot);
+              BoundingBox *person = malloc(sizeof(BoundingBox*));
+              person->left = left;
+              person->right = right;
+              person->top = top;
+              person->bot = bot;
+              persons[personsCnt++] = person;
+            }
+
+            else if (isSportsBall) {
+              printf("Sports ball found at position- left=%d right=%d top=%d bottom=%d\n", left, right, top, bot);
+              sportsBall = malloc(sizeof(BoundingBox*));
+              sportsBall->left = left;
+              sportsBall->right = right;
+              sportsBall->top = top;
+              sportsBall->bot = bot;
+            }
 
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {
@@ -546,7 +614,7 @@ void show_image_cv(image p, const char *name, IplImage *disp)
     sprintf(buff, "%s", name);
 
     int step = disp->widthStep;
-    cvNamedWindow(buff, CV_WINDOW_NORMAL); 
+    cvNamedWindow(buff, CV_WINDOW_NORMAL);
     //cvMoveWindow(buff, 100*(windows%10) + 200*(windows/10), 100*(windows%10));
     ++windows;
     for(y = 0; y < p.h; ++y){
@@ -791,7 +859,7 @@ void place_image(image im, int w, int h, int dx, int dy, image canvas)
 
 image center_crop_image(image im, int w, int h)
 {
-    int m = (im.w < im.h) ? im.w : im.h;   
+    int m = (im.w < im.h) ? im.w : im.h;
     image c = crop_image(im, (im.w - m) / 2, (im.h - m)/2, m, m);
     image r = resize_image(c, w, h);
     free_image(c);
@@ -953,7 +1021,7 @@ void letterbox_image_into(image im, int w, int h, image boxed)
         new_w = (im.w * h)/im.h;
     }
     image resized = resize_image(im, new_w, new_h);
-    embed_image(resized, boxed, (w-new_w)/2, (h-new_h)/2); 
+    embed_image(resized, boxed, (w-new_w)/2, (h-new_h)/2);
     free_image(resized);
 }
 
@@ -973,7 +1041,7 @@ image letterbox_image(image im, int w, int h)
     fill_image(boxed, .5);
     //int i;
     //for(i = 0; i < boxed.w*boxed.h*boxed.c; ++i) boxed.data[i] = 0;
-    embed_image(resized, boxed, (w-new_w)/2, (h-new_h)/2); 
+    embed_image(resized, boxed, (w-new_w)/2, (h-new_h)/2);
     free_image(resized);
     return boxed;
 }
@@ -1239,7 +1307,7 @@ image blend_image(image fore, image back, float alpha)
     for(k = 0; k < fore.c; ++k){
         for(j = 0; j < fore.h; ++j){
             for(i = 0; i < fore.w; ++i){
-                float val = alpha * get_pixel(fore, i, j, k) + 
+                float val = alpha * get_pixel(fore, i, j, k) +
                     (1 - alpha)* get_pixel(back, i, j, k);
                 set_pixel(blend, i, j, k, val);
             }
@@ -1346,7 +1414,7 @@ void saturate_exposure_image(image im, float sat, float exposure)
 
 image resize_image(image im, int w, int h)
 {
-    image resized = make_image(w, h, im.c);   
+    image resized = make_image(w, h, im.c);
     image part = make_image(w, im.h, im.c);
     int r, c, k;
     float w_scale = (float)(im.w - 1) / (w - 1);
@@ -1543,7 +1611,7 @@ image collapse_images_vert(image *ims, int n)
         free_image(copy);
     }
     return filters;
-} 
+}
 
 image collapse_images_horz(image *ims, int n)
 {
@@ -1579,7 +1647,7 @@ image collapse_images_horz(image *ims, int n)
         free_image(copy);
     }
     return filters;
-} 
+}
 
 void show_image_normalized(image im, const char *name)
 {
